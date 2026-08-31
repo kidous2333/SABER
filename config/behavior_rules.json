@@ -1,0 +1,12 @@
+{
+  "_comment": "Human-defined criteria for each behavior class. The LLM references these when generating factors. Can be manually modified.",
+  "rules": {
+    "approach": "The subject mouse moves toward a conspecific from a distance, involving two key elements: orientation toward the other mouse AND decreasing inter-animal distance. Focus on frames where self_facing_other and approach_speed are both positive.",
+    "blank": "The subject mouse stands on all four paws, remaining stationary. Focus on frames where speed is near zero, all velocity features are near zero, and body_compactness is normal (not in a rearing posture).",
+    "climb": "The subject mouse rears up, attempting to climb the walls of the test arena. Focus on frames where body_orientation is near vertical, body_length changes (stretching), speed is low but body velocity may show specific directional patterns.",
+    "explore_object": "The subject mouse has no clear movement direction and stays continuously mobile. Focus on frames where speed > 0 but heading_diff shows high-frequency changes (no fixed direction), and dist_to_other is relatively large.",
+    "positive_sniffs": "The subject mouse remains close to a conspecific and engages in sniffing behavior. Focus on frames where dist_to_other is very small, self_facing_other is high, and speed is low.",
+    "self_grooming": "The subject mouse is engaged in self-grooming behavior. Focus on frames where body_compactness changes (body curled up), nose_to_head distance varies (head movement), and speed is low.",
+    "stand": "The subject mouse maintains a bipedal rearing posture. Focus on frames where body_orientation is near vertical, nose_to_head and head_to_body ratio changes (body elongation), and speed is low."
+  }
+}

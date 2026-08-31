@@ -1,0 +1,117 @@
+# ============================================================
+# seq_length=3 — common + discovery config
+# ============================================================
+
+# ---- Common ----
+# ============================================================
+# Common configuration — shared by main.py and synth_validate.py
+# ============================================================
+
+# LLM API configuration
+llm:
+  provider: "openai"                       # "openai" | "glm" | "anthropic"
+  api_key: ""  # via OPENAI_API_KEY in .env, or fill in directly
+  base_url: "https://www.micuapi.ai/v1"
+  model: "gpt-5.5"
+  temperature: 0.7
+  max_tokens: 16384
+  timeout: 300                             # HTTP request timeout in seconds
+  hypotheses_per_round: 8              # Number of hypotheses generated per round
+
+# Dataset configuration file path (JSON format, contains train/val keypoint paths and behavior annotation paths)
+dataset_config_file: "../dataset_config.json"
+
+# Temporal slicing configuration (passed to MouseBehaviorDataset)
+sequence:
+  seq_length: 3           # Number of frames per sample (1 = single frame, >1 = temporal window)
+  stride: 3               # Slicing stride
+  frame_interval: 1       # Frame interval (for sparse sampling)
+  purity_threshold: 1.0   # Sequence label purity threshold (1.0 = only keep all-same-class sequences)
+  boundary_margin: 10     # Number of frames to exclude on each side of behavior transition boundaries (0 = no exclusion)
+
+# Behavior class list (for LLM prompt; auto-merged from dataset_config_file at runtime)
+data:
+  behavior_classes:
+    - "explore_object"
+    - "climb"
+    - "self_grooming"
+    - "stand"
+    - "blank"
+    - "positive_sniffs"
+    - "approach"
+    - "climbsocial"
+
+# Behavior rule definition file referenced during LLM factor generation
+behavior_rules: "config/behavior_rules.json"
+
+# Data preprocessing configuration (new optimization switches, disabled by default to preserve original behavior)
+preprocessing:
+  # ── Keypoint normalization ──
+  scale_normalize: false            # Scale normalization: divide keypoint coords by bbox width/height
+  rotation_align: false             # Rotation alignment: rotate mouse to canonical orientation (nose→tail root aligned to horizontal axis)
+  # ── Additional engineered features (individual switches) ──
+  engineered_features:
+    relative_orientation: false     # Angle between the two mice's nose-tail lines
+    nose_nose_dist: false           # Distance between the two mice's nose tips
+    relative_velocity_dot: false    # Dot product of the two mice's velocities (same direction>0, opposite<0)
+    relative_velocity_cross: false  # Cross product of the two mice's velocities (clockwise/counterclockwise rotation)
+    tail_energy: false              # Frame-to-frame displacement variance of tail keypoints (emotion/stress indicator)
+    body_elongation: false          # Euclidean distance from nose to tail root (elongated during exploration, curled when anxious)
+    stillness: false                # Consecutive stationary frame count (stationary when speed < threshold)
+    engineered_derivatives: false   # First-order temporal derivatives of existing engineered features
+  # ── Data augmentation (effective only when is_train=True) ──
+  augmentation:
+    enabled: true
+    horizontal_flip: true          # Horizontal flip (probability 0.5)
+    temporal_jitter: 2              # Max frame offset for temporal jitter (0=disabled, recommended 2)
+    rotation_jitter_deg: 5.0        # Max rotation perturbation angle (0=disabled, recommended 5.0)
+  # ── Missing value imputation improvements ──
+  bidirectional_impute: true       # Bidirectional imputation for long gaps (replaces original unidirectional Kalman filter)
+  # ── Boundary handling ──
+  soft_boundary: true              # Soft boundary weighting (replaces hard exclusion of boundary frames)
+
+# Missing value imputation configuration
+imputation:
+  short_gap_max: 10        # Gaps <= this many frames use linear interpolation; longer gaps use Kalman filter
+
+# Output paths
+output:
+  factors_dir: "factors"   # Valid factors output directory
+  memory_dir: "memory/seq3"     # Experience memory output directory
+  logs_dir: "logs"         # Log directory
+
+# ---- Discovery ----
+# ============================================================
+# Factor discovery configuration — used only by main.py
+# ============================================================
+
+# Factor engine configuration
+factor_engine:
+  max_error_ratio: 0.1    # Max allowed ratio of frames where factor computation errors out (factor discarded if exceeded)
+  min_valid_ratio: 0.5    # Min ratio of valid factor values (factor discarded if non-NaN ratio falls below this)
+
+# Single-factor validation configuration (StratifiedKFold + LightGBM OvR)
+validation:
+  n_splits: 5             # Number of StratifiedKFold splits
+  min_auc: 0.7            # OvR binary classification AUC threshold (per class)
+  min_f1: 0.5            # OvR binary classification F1 threshold (per class)
+  early_stopping_rounds: 20
+  use_gpu: false          # CPU is faster for shallow trees (depth<=4)
+  lgbm_params:
+    n_estimators: 200
+    max_depth: 4
+    learning_rate: 0.05
+    num_leaves: 31
+    random_state: 42
+    n_jobs: 1              # Single-threaded to avoid CPU surge when multiple workers validate simultaneously
+
+# Main loop control
+loop:
+  max_rounds: 200          # Maximum loop rounds
+  max_valid_factors: 500  # Maximum number of valid factors to save
+  early_stop_rounds: 5    # Stop if no new valid factors for this many consecutive rounds
+  use_memory: true          # false = do not pass historical experience to LLM (start fresh each round)
+  max_summary_chars: 5000   # Overall summary character limit (warning only, recent entries not truncated)
+  keep_recent_rounds: 5    # Keep original text for the most recent N exploration rounds (uncompressed)
+  keep_recent_factors: 15   # Keep original text for the most recent N valid factors
+  earlier_max_chars: 3000   # After aggregating earlier experiences by target, truncate if still exceeding this limit
