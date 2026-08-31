@@ -1,0 +1,12 @@
+{
+  "('acceleration', 'approach_speed', 'dist_to_other', 'self_facing_other')": 1,
+  "('approach_speed', 'dist_to_other')": 1,
+  "('acceleration', 'dist_to_other')": 1,
+  "('dist_to_other', 'self_facing_other', 'speed')": 1,
+  "('approach_speed', 'speed')": 1,
+  "('body_to_tail', 'dist_to_other', 'tail_motion')": 1,
+  "('body_vel_x', 'body_vel_y', 'dist_to_other')": 1,
+  "('body_vel_y', 'dist_to_other')": 1,
+  "('acceleration', 'body_to_tail', 'dist_to_other')": 1,
+  "('body_vel_x', 'dist_to_other')": 1
+}

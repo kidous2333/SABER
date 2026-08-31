@@ -1,0 +1,36 @@
+{
+  "train": [
+    {
+      "Mouse_key_point_file": [
+        "/path/to/yolo_output/mouse/session1",
+        "/path/to/yolo_output/mouse/session2"
+      ],
+      "Tail_key_point_file": [
+        "/path/to/yolo_output/tail/session1",
+        "/path/to/yolo_output/tail/session2"
+      ],
+      "behavior_file_mouse1": "/path/to/labels/session1_mouse1.csv",
+      "behavior_file_mouse2": "/path/to/labels/session1_mouse2.csv",
+      "max_instances_num": 2
+    }
+  ],
+  "test": [
+    {
+      "Mouse_key_point_file": [
+        "/path/to/yolo_output/mouse/test_session"
+      ],
+      "Tail_key_point_file": [
+        "/path/to/yolo_output/tail/test_session"
+      ],
+      "behavior_file_mouse1": "/path/to/labels/test_mouse1.csv",
+      "max_instances_num": 2
+    }
+  ],
+  "label_map_file": "config/org_label_map.json",
+  "label_merge": {
+    "enabled": false,
+    "groups": [
+      { "target": "stand", "sources": ["climbsocial"] }
+    ]
+  }
+}

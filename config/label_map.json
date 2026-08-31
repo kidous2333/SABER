@@ -1,0 +1,11 @@
+{
+    "explore_object" : 0,
+    "climb" : 1,
+    "self_grooming" : 2,
+    "stand" : 3,
+    "blank": 4,
+
+    "positive_sniffs" : 5,
+    "approach" : 6,
+    "climbsocial" : 7
+    }

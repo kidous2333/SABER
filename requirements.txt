@@ -1,0 +1,76 @@
+# ============================================================
+# Factor Discovery Studio — Python Dependency Specification
+# ============================================================
+# Install: pip install -r requirements.txt
+#
+# Categories:
+#   [required]  = core functionality, must install
+#   [llm]       = LLM API client (install at least one)
+#   [gui]       = desktop GUI application
+#   [optional]  = extra features, install as needed
+# ============================================================
+
+# --------------------------------------------------
+# Core data processing [required]
+# --------------------------------------------------
+numpy>=1.23.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# --------------------------------------------------
+# Machine learning [required]
+# --------------------------------------------------
+scikit-learn>=1.3.0
+lightgbm>=4.0.0
+torch>=2.0.0
+
+# --------------------------------------------------
+# Computer vision [required]
+# --------------------------------------------------
+opencv-python>=4.8.0
+
+# --------------------------------------------------
+# Configuration & utilities [required]
+# --------------------------------------------------
+PyYAML>=6.0
+python-dotenv>=1.0.0
+tqdm>=4.60.0
+joblib>=1.2.0
+
+# --------------------------------------------------
+# LLM API clients [llm] — install at least one
+# --------------------------------------------------
+openai>=2.0.0
+
+# Optional LLM backends (uncomment if needed):
+# anthropic>=0.90.0
+# zhipuai>=2.0.0
+
+# --------------------------------------------------
+# Plotting & visualization [required]
+# --------------------------------------------------
+matplotlib>=3.7.0
+
+# --------------------------------------------------
+# GUI — Factor Discovery Studio [gui]
+# --------------------------------------------------
+PySide6>=6.6.0
+paramiko>=3.0.0
+psutil>=5.9.0
+
+# --------------------------------------------------
+# Pose model training [optional]
+# --------------------------------------------------
+ultralytics>=8.3.0  # tmp_n.yaml uses C2PSA (yolo11-era); verified with 8.4.81
+einops>=0.6.0
+
+# --------------------------------------------------
+# Factor evolution engine [optional]
+# --------------------------------------------------
+deap>=1.4.0
+xgboost>=2.0.0
+
+# --------------------------------------------------
+# CRF sequence decoding [optional]
+# --------------------------------------------------
+sklearn-crfsuite>=0.3.0

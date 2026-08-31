@@ -1,0 +1,67 @@
+# ===== Environment & secrets =====
+.env
+*.env
+
+# ===== Python cache =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ===== Virtual environment =====
+.venv/
+venv/
+env/
+
+# ===== System files =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE =====
+.idea/
+.vscode/
+
+# ===== Claude Code local config =====
+.claude/
+
+# ===== Raw data =====
+data/
+labels/
+
+# ===== Dataset preprocessing caches (regeneratable) =====
+dataset_cache/
+pipeline_stage_cache/
+gui/dataset_cache/
+gui/pipeline_stage_cache/
+
+# ===== Run logs & outputs =====
+logs/
+runs/
+gui/logs/
+gui/runs/
+visualizations/
+e2e_output/
+miniscope_output/
+inference_results.csv
+batch_progress.log
+
+# ===== GUI local settings (regeneratable) =====
+gui_settings.json
+gui/gui_settings.json
+
+# ===== Model weights (distributed separately) =====
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# ===== Temp files =====
+*.dat
+*.tmp
+null
+
+# ===== Dataset path configs (contain local absolute paths) =====
+config/dataset_config.json
+config/dataset_configcpy.json
+config/org_dataset_config.json

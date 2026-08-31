@@ -1,0 +1,220 @@
+# ============================================================
+# Synthetic validation configuration — used only by synth_validate.py
+# ============================================================
+
+# synth_validate.py runtime parameters (original CLI arguments, modifiable here)
+run:
+  factors: "memory/valid_factors.json"   # Valid factors JSON path
+  output_dir: "memory"                   # Report and confusion matrix output directory
+  max_samples: 0                         # Max frames per split to sample (0=no limit, for debugging)
+  num_workers: 8                         # Number of parallel processes
+  num_chunks: 256                        # Number of window slices
+  # Mode switches
+  multiresolution: true                  # Multi-resolution three-stage pipeline (recommended)
+  temporal: true                         # Additionally run temporal second-order in standard mode (ignored in multiresolution)
+  ovr: false                              # Additionally run OvR binary classification validation after multiresolution
+  benchmark: false                        # Compare RF/XGBoost/MLP/BiLSTM models after completion
+  visualize_raster: true                 # Plot prediction vs ground truth label raster
+  raster_frames: 5000                   # Number of consecutive frames to show in raster
+  raster_seed: null                      # Raster random seed (null = random)
+  # Purity strategy: nan_boundary | none | strict
+  purity_mode: "none"
+  val_purity_mode: null                  # null = same as purity_mode
+  # Factor matrix cache (disabled — always compute from scratch)
+  use_cache: false
+  refresh_cache: false
+  cache_dir: "dataset_cache"
+  # Pipeline stage cache (disabled — always compute from scratch)
+  use_stage_cache: false
+  refresh_stage_cache: false
+  stage_cache_dir: "pipeline_stage_cache"
+  # Factor correlation filtering (empty string = no filtering)
+  filter_corr: ""
+  corr_threshold: 0.85
+  # Save frame-level cache (disabled)
+  save_cache: ""
+
+# Synthetic validation (SynthValidator)
+synth_validation:
+  use_gpu: false          # CPU is faster for shallow trees (depth<=4)
+  tmp_dir: "pipeline_stage_cache"
+  nan_fill: "mean"        # "mean" | "zero" — NaN column fill strategy
+  normalize_cm: true      # Whether to additionally output row-normalized confusion matrix
+  class_weight: balanced  # "balanced" | null
+  early_stopping_rounds: 50
+  top_k: 3                # Top-k accuracy (0 = disabled)
+  feature_selection_top_k: 0  # Select top-k factors by LGBM importance then retrain (0 = no selection)
+  # Number of top-k factors to keep per group by mean_auc (0 = no limit)
+  # Supports two formats:
+  #   integer: uniform limit for all groups, e.g. 30
+  #   dict: per-group limits, e.g. {"short": 30, "medium": 80, "long": 50}
+  top_k_per_group:
+    short: 0
+    medium: 0
+    long: 0
+  # Focal Loss (for handling class imbalance)
+  use_focal_loss: true
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  lgbm_params:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.05
+    num_leaves: 63
+    random_state: 42
+    n_jobs: 1             # Single-threaded for determinism
+    deterministic: true   # GPU deterministic training (LGBM >= 4.3.0)
+  # Residual connections (skip connection)
+  residual_stage1: true   # Stage 1: concat factor matrix to intra-group LGBM output, then feed into meta-LGBM
+  residual_stage2: true   # Stage 2: concat meta feature matrix to meta-LGBM output, then feed into temporal stage
+
+# Temporal validation (TemporalValidator)
+temporal_validation:
+  window_size: 31         # Sliding window size (frames, only used in lgbm mode)
+  # Best model selection metric (also used for early stopping)
+  # Options: val_acc | val_balanced_acc | macro_f1 | weighted_f1 | macro_auc | weighted_auc
+  # Recommended: val_balanced_acc or macro_f1 when rare classes are abundant
+  monitor_metric: "val_balanced_acc"
+  # Temporal model selection: lgbm | bilstm | transformer | mamba
+  # lgbm        : Sliding window statistical features + LightGBM (no GPU needed)
+  # bilstm       : Bidirectional LSTM (GPU needed)
+  # transformer  : Multi-head self-attention Transformer Encoder (GPU needed)
+  # mamba        : State Space Model (GPU needed + pip install mamba-ssm)
+  temporal_model: "bilstm"
+
+  # ── Loss function optimization ──
+  use_focal_loss: true              # Focal Loss instead of CrossEntropy (neural network path only)
+  focal_alpha: 0.25                 # Focal Loss α (positive class weighting coefficient)
+  focal_gamma: 2.0                  # Focal Loss γ (hard sample focusing strength)
+  use_class_weights: true           # CrossEntropyLoss class weighting based on training set frequency
+
+  # ── Neural network path optimization ──
+  seq_output_residual: true         # Output residual connection: output = input_proba + model(input_proba)
+  seq_use_extra_features: true      # Concatenate meta_X (Stage2 residual) to neural network input
+
+  # ── LGBM path optimization ──
+  multi_scale_windows: [7, 15, 31, 63]  # Multi-scale temporal windows (empty list=disabled, only use window_size)
+  enhanced_features: true           # Enhanced temporal features: differencing/EMA/cross-class
+  # New temporal feature switches
+  autocorr_features: true          # Short-term autocorrelation of probability series (lag 1/2/3)
+  cross_scale_features: true       # Multi-scale interaction features (e.g. short−long trend difference)
+  distribution_shape: true        # Probability distribution skewness/kurtosis (replaces entropy-only)
+
+  # ── Sequence decoders (executed in list order) ──
+  # Comment/uncomment to control which decoders are active this run.
+  decoders:
+
+    # ---- Lightweight rule corrector (only fixes obvious errors on low-confidence frames) ----
+    - name: rule_correct
+      config:
+        max_flicker: 3                      # Max "flicker" frame count
+        flicker_prob_threshold: 0.05        # Flicker correction probability threshold
+        window_size: 31                     # Local probability check window
+        proba_consistency_threshold: 0.20   # Window probability contradiction threshold
+        min_consecutive: 5                  # Min consecutive frames satisfying flip condition
+        boundary_refine: true               # Boundary refinement
+        confidence_margin: 0.3              # BiLSTM confidence threshold (frames with top1-top2 exceeding this are not corrected)
+        smooth_transitions: true            # Boundary smoothing: defer label switch if old class probability still high at switch point
+
+    # ---- Viterbi duration-aware decoding (to chain Viterbi→RuleCorrector, uncomment and place before rule_correct) ----
+    # - name: viterbi_duration
+    #   config:
+    #     min_segment: 30
+    #     self_trans_boost: 30.0
+    #     duration_penalty: 5.0
+    #     prob_aware_merge: true
+    #     per_class_duration: true
+    #     per_class_transition: true
+
+    # ---- CRF Linear-chain Conditional Random Field ----
+    # - name: crf
+    #   config:
+    #     skip: false
+    #     max_train_samples: 0
+    #     tune_hyperparams: false
+    #     use_enriched_features: true
+
+    # ---- HMM Hidden Markov Model (hmmlearn) ----
+    # - name: hmm
+    #   config:
+    #     n_iter: 100
+    #     covariance_type: "diag"
+    #     supervised_init: true
+    #     refine_em: false
+    #     min_segment: 30
+    #     prob_aware_merge: true
+
+    # ---- RL Q-learning sequence decoder ----
+    # - name: rl
+    #   config:
+    #     n_episodes: 1000
+    #     learning_rate: 0.01
+    #     epsilon: 0.1
+    #     gamma: 0.9
+    #     min_segment: 30
+    #     prob_aware_merge: true
+
+  # Neural network temporal model common parameters (shared by bilstm / transformer / mamba)
+  seq_model:
+    hidden_dim: 512               # Hidden layer dimension (used by bilstm/transformer/mamba)
+    num_layers: 3                 # Number of layers
+    dropout: 0.3                  # Dropout rate
+    epochs: 200                    # Max training epochs
+    lr: 0.005                     # Learning rate
+    weight_decay: 0.0005          # AdamW weight decay
+    chunk_size: 512               # Sliding window chunk length (frames)
+    stride_train: 512             # Training sliding stride (< chunk_size gives overlapping augmentation)
+    stride_val: 256               # Inference sliding stride
+    batch_size: 32                # Batch size
+    device: "cuda"                # "cuda" | "cpu"
+    use_amp: true                 # Automatic mixed precision (float16 forward+backward, saves ~40-50% VRAM)
+    early_stopping_patience: 20   # Early stopping patience epochs
+    seed: 42                      # Random seed (for reproducibility)
+    # Transformer-specific parameters
+    d_model: 128                  # Transformer internal dimension (recommended to match hidden_dim)
+    nhead: 4                      # Multi-head attention heads (must divide d_model)
+    # Mamba-specific parameters
+    d_state: 16                   # SSM state dimension
+    d_conv: 4                     # Convolution kernel size
+    expand: 2                     # Expansion factor
+
+    # ── BiLSTM / general architecture enhancements ──
+    use_layer_norm: true             # LayerNorm after LSTM/Transformer/Mamba, stabilizes deep training
+    use_deep_projection: false       # 2-layer MLP+GELU projection head replacing single Linear (generic for BiLSTM/Transformer/Mamba)
+    use_attention_pooling: false     # Multi-head self-attention layer after BiLSTM (hybrid architecture, BiLSTM only)
+
+    # ── Training strategy enhancements ──
+    label_smoothing: 0.1             # Label smoothing (0=disabled, recommended 0.05-0.15)
+    use_cosine_warmup: true          # Cosine annealing+warmup replacing ReduceLROnPlateau
+    warmup_epochs: 10               # Linear warmup epochs (effective only when cosine_warmup enabled)
+    use_ema: false                   # Exponential moving average of model weights (EMA weights auto-used during inference)
+    ema_decay: 0.999                 # EMA decay rate (closer to 1 = smoother)
+    use_balanced_sampling: true      # Weighted chunk sampling by class frequency (improves rare class training)
+
+    # ── Data augmentation ──
+    use_mixup: false                 # Time-series Mixup augmentation (probability vector interpolation)
+    mixup_alpha: 0.2                 # Mixup Beta distribution parameter (smaller = closer to original)
+    use_time_reversal: false         # Random temporal reversal augmentation (50% chance to reverse chunk)
+
+    # ── Hyperparameter grid search (automatically find optimal model parameters) ──
+    grid_search:
+      enabled: false              # Whether to enable grid search (when true, overrides manual params above)
+      method: "random"            # Search method: "grid" (full permutation) | "random" (random sampling)
+      max_trials: 30              # Max trial combinations (sampling cap for random method; not limited for grid)
+      epochs: 60                  # Max training epochs per trial (recommended fewer than full training epochs)
+      early_stopping_patience: 10 # Early stopping patience per trial (recommended fewer than full training)
+      monitor_metric: "val_balanced_acc"  # Evaluation metric: val_acc | val_balanced_acc | macro_f1 | weighted_f1 | macro_auc | weighted_auc
+      param_grid: # Search space (only searches parameters listed here; unlisted params use defaults above)
+        hidden_dim: [ 64, 128, 256, 512 ]
+        num_layers: [ 1, 2, 3, 4 ]
+        dropout: [ 0.1, 0.3, 0.5 ]
+        lr: [ 0.001, 0.003, 0.005, 0.01, 0.0005 ]
+        weight_decay: [ 0.00001, 0.00005, 0.0001 ]
+        batch_size: [ 16, 32, 64 ]
+        # Transformer-specific (effective only when temporal_model: transformer)
+        d_model: [ 64, 128, 256 ]
+        nhead: [ 2, 4, 8 ]
+        # Mamba-specific (effective only when temporal_model: mamba)
+        d_state: [ 8, 16, 32 ]
+        d_conv: [ 2, 4, 8 ]
+        expand: [ 2, 4 ]
