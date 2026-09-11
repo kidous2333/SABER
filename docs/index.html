@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SABER — Spatio-temporal Action Behavior Recognition</title>
+  <meta name="description" content="SABER: a locally deployable framework that couples multi-animal pose estimation with identity-preserving tracking, LLM-assisted behavioral factor mining, and multiscale temporal behavior classification." />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="assets/img/apple-touch-icon.png" />
+  <link rel="stylesheet" href="css/style.css?v=37" />
+</head>
+<body>
+
+  <!-- ============ NAV ============ -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="nav-logo" href="#top">
+        <img src="assets/img/icon.png" alt="SABER icon" class="nav-icon" />
+        <span>SABER</span>
+      </a>
+      <div class="nav-links">
+        <a href="#introduction">Introduction</a>
+        <a href="#method">Method</a>
+        <a href="#gui">GUI</a>
+        <a href="#results">Results</a>
+        <a href="#availability">Availability</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============ TITLE ============ -->
+  <header class="landing" id="top">
+    <h1 class="landing-title">SABER enables identity-resolved quantification of multi-animal social behavior</h1>
+    <p class="landing-authors"></p>
+  </header>
+
+  <!-- ============ OVERVIEW ============ -->
+  <div class="container">
+    <div class="side side--top side--overview">
+      <div class="side-text overview-text">
+        <p>
+          <b>SABER</b> couples <b>multi-animal pose estimation</b> with
+          <b>identity-preserving tracking</b>, <b>LLM-assisted behavioral factor
+          mining</b>, and <b>multiscale temporal behavior classification</b> &mdash; all
+          from a single overhead video stream, designed for social interactions in which
+          animals overlap, occlude one another, and rapidly change posture.
+        </p>
+        <ul>
+          <li><b>TMP</b> &mdash; pose estimation with <b>SAGA attention</b> and <b>BoT-SORT identity-preserving tracking</b>.</li>
+          <li><b>Factor mining</b> &mdash; an <b>LLM-driven closed loop</b> proposes and screens factor formulas with <b>LightGBM validation</b>.</li>
+          <li><b>Multiscale classification</b> &mdash; multiscale factor groups and <b>temporal integration</b> classify <b>seven behavioral categories</b>.</li>
+        </ul>
+        <p>
+          The pipeline proceeds in four steps (Figure 1): <b>pose estimation</b> and
+          <b>identity-preserving tracking</b> (panels a&ndash;b), <b>LLM-assisted factor
+          mining</b> (panel c), and <b>three-stage behavior prediction</b> (panel d).
+        </p>
+        <p>
+          Across <b>spontaneous interaction, mating, aggression, and four-mouse
+          recordings</b>, SABER improved pose accuracy and tracking continuity, and it
+          detected behavioral changes in <b>social-defeat-stress mice</b>.
+        </p>
+      </div>
+      <figure class="figure side-fig">
+        <a href="assets/figures/Figure1.png" target="_blank" rel="noopener"><img src="assets/figures/Figure1.png" alt="SABER overview" /></a>
+        <figcaption><b>Figure 1.</b> SABER overview &mdash; click to enlarge.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <hr />
+
+  <!-- ============ INTRODUCTION ============ -->
+  <section id="introduction">
+    <div class="container">
+      <h2 class="section-title">Introduction</h2>
+      <p>
+        Quantifying social behavior requires accurate assignment of posture and actions to
+        individual animals, but close contact, occlusion, and identity switches degrade pose
+        trajectories and limit downstream behavior recognition. We developed <b>SABER</b>
+        (Spatio-temporal Action Behavior Recognition), a locally deployable framework that
+        couples multi-animal pose estimation with identity-preserving tracking, interpretable
+        behavioral factor discovery (mining), and multiscale temporal behavior classification
+        from a single overhead video stream. Across spontaneous social interaction, mating,
+        aggression, and four-mouse recordings, SABER improved pose-estimation accuracy and
+        tracking continuity relative to comparator pipelines. Its factor-mining procedure
+        identified interpretable kinematic, postural and social descriptors, and temporal
+        integration improved classification of seven behavioral categories. Applied to
+        social-defeat-stress mice, SABER detected reduced approach behavior and a multivariate
+        behavioral profile that distinguished depression-susceptible from control animals.
+        SABER outputs could be synchronized with miniscope calcium recordings to link
+        behavioral states to neural activity. SABER therefore provides an accessible route
+        from social-interaction video to identity-resolved behavioral measurements suitable
+        for phenotyping and brain&ndash;behavior analysis.
+      </p>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ============ METHOD ============ -->
+  <section id="method">
+    <div class="container">
+      <h2 class="section-title">Pose estimation, identity-preserving tracking, factor mining, and multiscale classification</h2>
+
+      <div class="side side--fig2">
+        <div class="side-text">
+          <h3>Pose estimation (TMP)</h3>
+          <p>
+            <b>TMP</b> follows a <b>backbone&ndash;neck&ndash;head</b> architecture designed
+            for small, visually similar animals that frequently overlap. It combines
+            feature-dependent receptive fields with attention &mdash; <b>Semantic-Aware
+            Grouping Attention</b>, <b>Partitioned Self-Attention</b>, and <b>Global
+            Cross-Cluster Attention</b> &mdash; to localize <b>six mouse keypoints</b>, and
+            predicts per-animal <b>bounding boxes</b> and <b>mice confidence</b> from a
+            single <b>image batch</b>.
+          </p>
+          <p>
+            Figure 2 benchmarks TMP against DLC, SLEAP, and AlphaTracker in <b>OKS</b>,
+            <b>mAP</b>, <b>precision</b>, <b>recall</b>, and <b>F1</b> across spontaneous
+            social interaction, mating, aggression, and four-mouse recordings.
+          </p>
+          <p>
+            The head jointly predicts the <b>six keypoints</b> (snout, head center, body
+            center, tail base, and left/right ears), <b>bounding boxes</b>, and a <b>mice
+            confidence</b> score in one pass, with throughput stable from <b>64- to
+            640-px</b> inputs and <b>1- to 16-frame</b> batches (Figure 2, panels a,
+            c&ndash;d).
+          </p>
+        </div>
+        <figure class="figure side-fig">
+          <a href="assets/figures/Figure2.png" target="_blank" rel="noopener"><img src="assets/figures/Figure2.png" alt="TMP architecture" loading="lazy" /></a>
+          <figcaption><b>Figure 2.</b> TMP pose-estimation network.</figcaption>
+        </figure>
+      </div>
+
+      <div class="side side--fig3">
+        <div class="side-text">
+          <h3>Identity-preserving tracking (BoT-SORT)</h3>
+          <p>
+            Detections are associated across frames by <b>BoT-SORT identity-preserving
+            tracking</b>: a <b>Kalman-filter</b> motion path and an appearance path
+            (<b>Re-ID features</b> matched by <b>cosine similarity</b>) are gated by
+            <b>IoU</b> and <b>distance</b>, with <b>track management</b> that keeps each
+            animal&rsquo;s identity stable through close contact and occlusion.
+          </p>
+          <p>
+            Figure 3 evaluates tracking quality with <b>ID switches (IDSW)</b>, <b>target
+            losses</b>, and <b>keypoint switches (KPSW)</b> per 10,000 frames against
+            DLC, SLEAP, and AlphaTracker, and shows identity-resolved <b>trajectories</b>
+            and <b>inter-mouse distance</b> traces across the four social settings.
+          </p>
+          <p>
+            Panel a details the pipeline: <b>model inference</b>, <b>BoT-SORT
+            association</b> over first/second/N-th associations with
+            <b>create/update/delete</b> track states, ending in per-identity <b>track
+            summaries</b>.
+          </p>
+        </div>
+        <figure class="figure side-fig">
+          <a href="assets/figures/Figure3.png" target="_blank" rel="noopener"><img src="assets/figures/Figure3.png" alt="Pose inference and BoT-SORT tracking" loading="lazy" /></a>
+          <figcaption><b>Figure 3.</b> Pose inference, BoT-SORT tracking, and tracking results.</figcaption>
+        </figure>
+      </div>
+
+      <div class="side side--fig4">
+        <div class="side-text">
+          <h3>LLM-assisted behavioral factor mining</h3>
+          <p>
+            To reduce reliance on manually specified behavioral features, SABER operates a
+            closed <b>factor-mining loop</b>: a <b>large language model</b> proposes candidate
+            factor formulas over pose-derived features, a <b>sandboxed engine</b> executes
+            them over the video, and <b>one-versus-rest LightGBM screening</b> with
+            <b>AUC/F1 thresholds</b> retains interpretable kinematic, postural and social
+            descriptors. Accepted factors are fed back as <b>experience</b> to guide the
+            next round of hypotheses.
+          </p>
+          <p>
+            Figure 4 summarizes what the loop discovers: factor counts per <b>sequence
+            length</b>, the <b>best AUC per factor</b>, the <b>top-30 most utilized
+            features</b>, and mined factor names for behaviors such as <b>approach</b>,
+            <b>sniffing</b>, <b>self-grooming</b>, <b>climbing</b>, <b>exploration</b>,
+            <b>standing</b>, and <b>blank</b>.
+          </p>
+          <p>
+            The loop runs as four components &mdash; a <b>hypothesis generator</b>, a
+            sandboxed <b>factor engine</b>, a <b>statistical validator</b>, and a
+            persistent <b>memory manager</b> &mdash; that pass accepted factors and
+            experience across rounds (Figure 4, panel a).
+          </p>
+        </div>
+        <figure class="figure side-fig">
+          <a href="assets/figures/Figure4.png" target="_blank" rel="noopener"><img src="assets/figures/Figure4.png" alt="LLM-assisted factor mining loop" loading="lazy" /></a>
+          <figcaption><b>Figure 4.</b> Hypothesis generation and sandbox execution in factor mining.</figcaption>
+        </figure>
+      </div>
+
+      <div class="side side--fig5">
+        <div class="side-text">
+          <h3>Multiscale temporal behavior classification</h3>
+          <p>
+            Factors are grouped by <b>temporal scale</b> &mdash; <b>short-</b>,
+            <b>medium-</b>, and <b>long-range</b>. Each group trains a dedicated
+            <b>LightGBM</b> classifier; the per-group probabilities are stacked into a
+            <b>meta-learner</b>; and a <b>temporal stage</b> (a 31-frame sliding-window
+            temporal-LightGBM or a <b>BiLSTM</b> pathway) enforces behavioral continuity,
+            yielding per-frame classification of <b>seven behavioral categories</b>.
+          </p>
+          <p>
+            Figure 5 benchmarks SABER against <b>Inter-brain</b>, <b>A-SOiD</b>, and
+            <b>B-SOiD</b> in <b>macro/weighted F1</b>, <b>balanced accuracy</b>, and
+            <b>AUC</b> per behavior.
+          </p>
+          <p>
+            Panels b&ndash;d summarize the training and validation datasets &mdash;
+            hundreds of thousands of <b>frames</b> split into <b>segments</b> of varying
+            <b>duration</b> &mdash; and panel a shows how <b>short-</b> (window &le;3),
+            <b>medium-</b> (4&ndash;15), and <b>long-range</b> (&gt;15) factor features
+            are combined before the <b>meta-learner</b> and temporal stage.
+          </p>
+        </div>
+        <figure class="figure side-fig">
+          <a href="assets/figures/Figure5.png" target="_blank" rel="noopener"><img src="assets/figures/Figure5.png" alt="Multiscale temporal behavior classification" loading="lazy" /></a>
+          <figcaption><b>Figure 5.</b> Multiscale temporal classification of seven behavioral categories.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ============ GUI ============ -->
+  <section id="gui">
+    <div class="container">
+      <h2 class="section-title">A readily accessible and user-friendly GUI</h2>
+      <p>
+        SABER supports local installation, GUI operation, CLI execution, and Python API use.
+        The desktop application mirrors the complete analysis workflow &mdash; pose training,
+        factor discovery, three-stage behavior-model training, inference on new recordings,
+        and validation &mdash; with identical results to the command-line tools.
+      </p>
+      <div class="carousel-wrap">
+        <div class="carousel" id="carousel"><figure class="carousel-item" data-caption="TMP pose-model training">
+          <a href="assets/img/gui/gui_train_tmp.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_train_tmp.png" alt="TMP pose-model training tab" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Three-stage behavior-model training">
+          <a href="assets/img/gui/gui_train_behavior.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_train_behavior.png" alt="Behavior-model training tab" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Factor mining in progress">
+          <a href="assets/img/gui/gui_mining_progress.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_mining_progress.png" alt="Factor mining in progress" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Factor mining results">
+          <a href="assets/img/gui/gui_mining_results.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_mining_results.png" alt="Factor mining results" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Factor detail card">
+          <a href="assets/img/gui/gui_factor_card.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_factor_card.png" alt="Factor detail card" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Factor evolution">
+          <a href="assets/img/gui/gui_evolution.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_evolution.png" alt="Factor evolution tab" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Factor tuning">
+          <a href="assets/img/gui/gui_tuner.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_tuner.png" alt="Factor tuning tab" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Factor repository management">
+          <a href="assets/img/gui/gui_manager.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_manager.png" alt="Factor repository management tab" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Factor correlation analysis">
+          <a href="assets/img/gui/gui_correlation.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_correlation.png" alt="Factor correlation analysis tab" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Factor analysis">
+          <a href="assets/img/gui/gui_analysis.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_analysis.png" alt="Factor analysis tab" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Inference &mdash; activity heatmap">
+          <a href="assets/img/gui/gui_infer_heatmap.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_infer_heatmap.png" alt="Inference — activity heatmap" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Inference &mdash; global trajectory">
+          <a href="assets/img/gui/gui_infer_traj.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_infer_traj.png" alt="Inference — global trajectory" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Inference &mdash; trajectory tracking">
+          <a href="assets/img/gui/gui_infer_track.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_infer_track.png" alt="Inference — trajectory tracking" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Inference &mdash; ROI entry/exit and dwell-time statistics">
+          <a href="assets/img/gui/gui_infer_roi.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_infer_roi.png" alt="Inference — ROI entry/exit and dwell-time statistics" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="YAML configuration management">
+          <a href="assets/img/gui/gui_config.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_config.png" alt="YAML configuration management tab" /></a>
+        </figure>
+<figure class="carousel-item" data-caption="Remote execution (SSH)">
+          <a href="assets/img/gui/gui_ssh.png" target="_blank" rel="noopener"><img src="assets/img/gui/gui_ssh.png" alt="Remote execution tab" /></a>
+        </figure>
+        <p class="carousel-caption" id="carousel-caption"></p></div>
+      </div>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ============ RESULTS ============ -->
+  <section id="results">
+    <div class="container">
+      <h2 class="section-title">Applications and results</h2>
+      <p>
+        Across spontaneous social interaction, mating, aggression, and four-mouse recordings,
+        SABER improved pose-estimation accuracy and tracking continuity relative to comparator
+        pipelines, and temporal integration improved classification of seven behavioral
+        categories. Applied to social-defeat-stress mice, SABER detected reduced approach
+        behavior and a multivariate behavioral profile that distinguished
+        depression-susceptible from control animals, and its outputs could be synchronized
+        with miniscope calcium recordings to link behavioral states to neural activity.
+      </p>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ============ AVAILABILITY ============ -->
+  <section id="availability">
+    <div class="container">
+      <h2 class="section-title">Software, code and data availability</h2>
+      <p>
+        Code is available at
+        <a href="https://github.com/kidous2333/SABER" target="_blank" rel="noopener">github.com/kidous2333/SABER</a>,
+        licensed for academic or non-profit organization noncommercial research use.
+        <!-- TODO: add dataset and pretrained-model download links once hosted -->
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <a href="https://github.com/kidous2333/SABER" target="_blank" rel="noopener" class="footer-github" aria-label="GitHub repository">
+        <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+      </a>
+      <p>&copy; 2026 Jiaqi Zheng. Licensed for academic or non-profit organization noncommercial research use only.</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js?v=18"></script>
+</body>
+</html>
