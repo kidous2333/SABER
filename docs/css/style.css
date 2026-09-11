@@ -1,0 +1,183 @@
+/* ============================================================
+   SABER project site — UDMT-style minimal academic single page
+   ============================================================ */
+
+:root {
+  --bg: #ffffff;
+  --text: #222222;
+  --text-muted: #555555;
+  --link: #1a73a8;
+  --border: #dddddd;
+  --maxw: 1000px;
+  /* 正文插图固定宽度（等比缩放，高度随图片宽高比变化） */
+  --figw: 420px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.65;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+a { color: var(--link); }
+
+/* ---------- nav ---------- */
+.nav {
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+.nav-inner {
+  max-width: var(--maxw); margin: 0 auto; padding: 10px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: var(--text); font-weight: 700;
+  font-size: 1.05rem; letter-spacing: 0.04em;
+}
+.nav-icon { width: 34px; height: 34px; }
+.nav-links { display: flex; gap: 22px; flex-wrap: wrap; }
+.nav-links a {
+  color: var(--text-muted); text-decoration: none; font-size: 0.92rem;
+}
+.nav-links a:hover { color: var(--text); text-decoration: underline; }
+
+/* ---------- landing title ---------- */
+.landing { text-align: center; padding: 24px 24px 4px; }
+.landing-title {
+  font-size: clamp(1.3rem, 2.3vw, 1.6rem); font-weight: 700; line-height: 1.3;
+  max-width: 1000px; margin: 0 auto 14px;
+}
+/* 作者行留白占位，保持标题与 Figure 1 的间距 */
+.landing-authors { color: var(--text-muted); font-size: 1rem; min-height: 1.65em; }
+
+/* ---------- sections ---------- */
+section { padding: 44px 0; }
+.section-title {
+  text-align: center; font-size: 1.5rem; font-weight: 700; margin-bottom: 22px;
+}
+section p { color: var(--text); margin-bottom: 14px; }
+section h3 { font-size: 1.05rem; margin: 18px 0 6px; color: var(--text); }
+
+hr { border: none; border-top: 1px solid var(--border); max-width: var(--maxw); margin: 0 auto; }
+
+
+/* ---------- figures ---------- */
+.figure { margin: 24px auto; text-align: center; }
+.figure img {
+  max-width: 100%; height: auto;
+  border: 1px solid var(--border); background: #fff;
+}
+.figure figcaption {
+  margin-top: 8px; font-size: 0.85rem; color: var(--text-muted); text-align: center;
+}
+
+/* ---------- overview (text beside Figure 1) ---------- */
+.overview-text p { font-size: 1.03rem; }
+.overview-text ul { margin: 14px 0 0 18px; }
+.overview-text li { margin-bottom: 11px; font-size: 0.97rem; color: var(--text-muted); }
+
+/* ---------- GUI carousel (2.5D fan, no 3D dependency) ---------- */
+.carousel-wrap { margin-top: 10px; }
+.carousel {
+  position: relative; height: 330px;
+}
+.carousel-item {
+  position: absolute; left: 50%; top: 50%;
+  width: 300px; margin: 0;
+  transform: translate(-50%, -50%);
+  transition: transform 0.7s ease, opacity 0.7s ease, filter 0.7s ease;
+  opacity: 0; pointer-events: none; z-index: 0;
+}
+.carousel-item img {
+  width: 100%; display: block;
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  background: #fff;
+}
+.carousel-caption {
+  text-align: center; color: var(--text-muted); font-size: 0.9rem;
+  min-height: 1.5em; margin-top: 6px;
+}
+@media (max-width: 640px) {
+  .carousel { height: 320px; }
+  .carousel-item { width: 240px; }
+}
+
+/* ---------- figure grids ---------- */
+.grid { display: grid; gap: 26px 20px; margin-top: 26px; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 760px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+.grid .figure { margin: 0; display: flex; flex-direction: column; }
+.grid .figure img { transition: opacity .15s ease; }
+.grid .figure a { display: block; }
+.grid .figure a:hover img { opacity: 0.85; }
+/* 统一图片展示高度，保证同排图注水平对齐 */
+.grid-3 .figure img { width: 100%; height: 330px; object-fit: contain; }
+.grid-2 .figure img { width: 100%; height: 460px; object-fit: contain; }
+.grid .figure figcaption { flex: 1; }
+
+/* ---------- method subsections (text left, figure right) ---------- */
+/* 图片列宽度固定为 --figw，文本列占剩余空间；两列垂直居中，高度尽量协调。
+   margin 控制各图之间的纵向空隙 */
+.side { display: grid; grid-template-columns: 1fr var(--figw); gap: 40px; align-items: center; margin: 64px 0; }
+.side--top { margin-top: 0; }
+.side-text h3 { margin-top: 0; }
+.side-fig { margin: 0; }
+/* 图片宽度固定为 --figw，高度按原始宽高比等比缩放（有的图高一些、有的矮一些），
+   靠右对齐 */
+.side-fig img {
+  display: block;
+  width: 100%;
+  max-width: var(--figw);
+  height: auto;
+  margin-left: auto;
+}
+.side-fig figcaption { text-align: right; }
+/* Fig2-5 统一固定宽度，等比放大（Figure 1 保持默认 --figw） */
+.side--fig2,
+.side--fig3,
+.side--fig4,
+.side--fig5 { --figw: 460px; }
+/* Figure 1 放大：利用剩余空间，比 Fig2-5 略大 */
+.side--overview { --figw: 480px; }
+/* Fig2-5 的文本拉伸填满图片高度：文本块占满整行高，段间均匀留白 */
+.side--fig2 .side-text,
+.side--fig3 .side-text,
+.side--fig4 .side-text,
+.side--fig5 .side-text {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  line-height: 1.9;
+}
+@media (max-width: 760px) {
+  .side { grid-template-columns: 1fr; gap: 16px; }
+}
+
+/* ---------- footer ---------- */
+.footer { border-top: 1px solid var(--border); padding: 26px 0 34px; }
+.footer-inner {
+  max-width: var(--maxw); margin: 0 auto; padding: 0 24px;
+  text-align: center; color: var(--text-muted); font-size: 0.85rem;
+}
+.footer-github { display: inline-block; color: var(--text-muted); margin-bottom: 8px; }
+.footer-github:hover { color: var(--text); }
