@@ -8,20 +8,16 @@
 
 SABER is a locally deployable, open-source framework that converts a single overhead video stream into identity-resolved behavioral measurements — accessible through a desktop GUI, CLI entry points, and a Python API.
 
-<table>
-  <tr>
-    <td width="44%"><img src="docs/assets/saber_framework.png" alt="SABER framework" width="100%"/></td>
-    <td width="56%">
-      <b>Four components, one workflow:</b>
-      <ul>
-        <li><b>TMP pose estimation</b> — a single-stage keypoint detector for overlapping, interacting animals (mAP 92.0 ± 1.5 % vs. 60.7–73.7 % for DeepLabCut / SLEAP / AlphaTracker).</li>
-        <li><b>Identity-preserving tracking</b> — BoT-SORT + appearance ReID links detections into identity-indexed trajectories, with the lowest ID-switch / target-loss / keypoint-switch errors across mating, aggression and four-mouse paradigms.</li>
-        <li><b>LLM-guided factor mining</b> — a closed loop proposing executable formulas, evaluating them on 42 kinematic / postural / social variables, and keeping factors passing a one-vs-rest LightGBM gate (AUC ≥ 0.65): 3,128 interpretable factors mined without hand-crafted feature engineering.</li>
-        <li><b>Three-stage temporal prediction (3-STBP)</b> — short / medium / long-range group LightGBMs → meta-learner → temporal refinement (BiLSTM or temporal-LightGBM) with calibration and rule correction; accuracy > 70 %, macro AUC ≈ 90 % (vs. ≈ 38 % for A-SOiD, < 25 % for B-SOiD).</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/assets/saber_framework.png" alt="SABER framework" width="40%"/>
+</p>
+
+**Four components, one workflow:**
+
+- **TMP pose estimation** — a single-stage keypoint detector for overlapping, interacting animals (mAP 92.0 ± 1.5 % vs. 60.7–73.7 % for DeepLabCut / SLEAP / AlphaTracker).
+- **Identity-preserving tracking** — BoT-SORT + appearance ReID links detections into identity-indexed trajectories, with the lowest ID-switch / target-loss / keypoint-switch errors across mating, aggression and four-mouse paradigms.
+- **LLM-based factor mining** — a closed loop proposing executable formulas, evaluating them on 42 kinematic / postural / social variables, and keeping factors passing a one-vs-rest LightGBM gate (AUC ≥ 0.65): 3,128 interpretable factors mined without hand-crafted feature engineering.
+- **Three-stage temporal prediction (3-STBP)** — short / medium / long-range group LightGBMs → meta-learner → temporal refinement (BiLSTM or temporal-LightGBM) with calibration and rule correction; accuracy > 70 %, macro AUC ≈ 90 % (vs. ≈ 38 % for A-SOiD, < 25 % for B-SOiD).
 
 ## Installation
 
@@ -102,21 +98,18 @@ Inference (inference/inference.py)
   └── Load run bundle → keypoints → frame-level behavior timeline CSV
 ```
 
-<table>
-  <tr>
-    <td width="36%"><img src="docs/assets/saber_factor_mining.png" alt="Factor mining loop" width="100%"/></td>
-    <td width="64%">
-      <b>The factor mining loop</b> — four stages, iterated over hundreds of rounds per temporal group:
-      <ul>
-        <li><b>Hypothesis generation</b> — the LLM proposes executable formulas from the 42-variable catalog, with the memory manager highlighting underused variable pairs and weak behavior classes.</li>
-        <li><b>Sandbox execution</b> — vectorized NumPy evaluation on centered temporal windows; imports, file and network access are disabled.</li>
-        <li><b>Statistical validation</b> — one-vs-rest LightGBM on held-out videos; factors reaching AUC ≥ 0.65 are retained.</li>
-        <li><b>Memory update</b> — accepted and rejected factors feed the next round, with early rounds compressed into per-class summaries.</li>
-      </ul>
-      The library is further extended by DEAP-GP evolution (<code>factors/evolution.py</code>) and LLM-driven parameter tuning (<code>factors/tuner.py</code>).
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/assets/saber_factor_mining.png" alt="Factor mining loop" width="40%"/>
+</p>
+
+**The factor mining loop** — four stages, iterated over hundreds of rounds per temporal group:
+
+- **Hypothesis generation** — the LLM proposes executable formulas from the 42-variable catalog, with the memory manager highlighting underused variable pairs and weak behavior classes.
+- **Sandbox execution** — vectorized NumPy evaluation on centered temporal windows; imports, file and network access are disabled.
+- **Statistical validation** — one-vs-rest LightGBM on held-out videos; factors reaching AUC ≥ 0.65 are retained.
+- **Memory update** — accepted and rejected factors feed the next round, with early rounds compressed into per-class summaries.
+
+The library is further extended by DEAP-GP evolution (`factors/evolution.py`) and LLM-driven parameter tuning (`factors/tuner.py`).
 
 ## GUI
 
