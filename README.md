@@ -9,7 +9,7 @@
 SABER is a locally deployable, open-source framework that converts a single overhead video stream into identity-resolved behavioral measurements — accessible through a desktop GUI, CLI entry points, and a Python API.
 
 <p align="center">
-  <img src="docs/assets/saber_framework.png" alt="SABER framework" width="40%"/>
+  <img src="docs/assets/saber_framework.png" alt="SABER framework" width="60%"/>
 </p>
 
 **Four components, one workflow:**
@@ -99,7 +99,7 @@ Inference (inference/inference.py)
 ```
 
 <p align="center">
-  <img src="docs/assets/saber_factor_mining.png" alt="Factor mining loop" width="40%"/>
+  <img src="docs/assets/saber_factor_mining.png" alt="Factor mining loop" width="60%"/>
 </p>
 
 **The factor mining loop** — four stages, iterated over hundreds of rounds per temporal group:
