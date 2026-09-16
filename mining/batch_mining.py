@@ -52,8 +52,11 @@ except Exception:
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CONFIG_DIR = Path("config")
-MEMORY_DIR = Path("memory")
+# Resolve relative to the repository root (this file lives in mining/), so the
+# script works regardless of the working directory it is launched from.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+CONFIG_DIR = PROJECT_ROOT / "config"
+MEMORY_DIR = PROJECT_ROOT / "memory"
 
 # Log stage detection
 RE_DATA_LOADING_DONE = re.compile(r"(Training set: \d+ windows|val window matrix)")
@@ -136,11 +139,11 @@ def count_factors_worker(seq: int, worker_id: str) -> int:
             if isinstance(data, list):
                 return len(data)
             else:
-                with open("batch_progress.log", "a", encoding="utf-8") as lf:
+                with open(str(PROJECT_ROOT / "batch_progress.log"), "a", encoding="utf-8") as lf:
                     lf.write(f"[WARN] count_factors_worker({seq},{worker_id}): not a list ({type(data).__name__})\n")
                 return 0
         except Exception as e:
-            with open("batch_progress.log", "a", encoding="utf-8") as lf:
+            with open(str(PROJECT_ROOT / "batch_progress.log"), "a", encoding="utf-8") as lf:
                 lf.write(f"[WARN] count_factors_worker({seq},{worker_id}): {type(e).__name__}: {e}\n")
             return 0
     return 0
@@ -292,10 +295,11 @@ class Worker:
         if self._restart_count > 0:
             log_file.write(f"\n\n=== RESTART #{self._restart_count} at {datetime.now().isoformat()} ===\n\n")
         self.proc = subprocess.Popen(
-            [python, "-u", "discovery.py", "--config", self.config_path],
+            [python, "-u", str(PROJECT_ROOT / "mining" / "discovery.py"), "--config", self.config_path],
             stdout=log_file,
             stderr=subprocess.STDOUT,
             env=env,
+            cwd=str(PROJECT_ROOT),
         )
         log_file.close()
         self.state = "LOADING"
@@ -808,7 +812,7 @@ class BatchMiner:
         self.env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
         self._stop = False
         self._shutting_down = False    # Shutting down flag, avoid duplicate triggering
-        self._stop_file = Path("batch_stop.txt")
+        self._stop_file = PROJECT_ROOT / "batch_stop.txt"
 
         # Dashboard
         self.dashboard = Dashboard(
@@ -825,7 +829,7 @@ class BatchMiner:
         )
 
         # Progress file
-        self._progress_log = Path("batch_progress.log")
+        self._progress_log = PROJECT_ROOT / "batch_progress.log"
 
     # ------------------------------------------------------------------
     # Auto-scaling decisions
