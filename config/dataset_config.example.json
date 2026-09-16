@@ -2,33 +2,44 @@
   "train": [
     {
       "Mouse_key_point_file": [
-        "/path/to/yolo_output/mouse/session1",
-        "/path/to/yolo_output/mouse/session2"
+        "/path/to/keypoints/mouse/video1",
+        "/path/to/keypoints/mouse/video2"
       ],
       "Tail_key_point_file": [
-        "/path/to/yolo_output/tail/session1",
-        "/path/to/yolo_output/tail/session2"
+        "/path/to/keypoints/tail/video1",
+        "/path/to/keypoints/tail/video2"
       ],
-      "behavior_file_mouse1": "/path/to/labels/session1_mouse1.csv",
-      "behavior_file_mouse2": "/path/to/labels/session1_mouse2.csv",
-      "max_instances_num": 2
+      "behavior_file_mouse1": [
+        "/path/to/labels/video1_mouse1.txt"
+      ],
+      "behavior_file_mouse2": [
+        "/path/to/labels/video1_mouse2.txt"
+      ],
+      "max_instances_num": 2,
+      "cache_name": "train_video1"
     }
   ],
-  "test": [
+  "val": [
     {
       "Mouse_key_point_file": [
-        "/path/to/yolo_output/mouse/test_session"
+        "/path/to/keypoints/mouse/video_val"
       ],
       "Tail_key_point_file": [
-        "/path/to/yolo_output/tail/test_session"
+        "/path/to/keypoints/tail/video_val"
       ],
-      "behavior_file_mouse1": "/path/to/labels/test_mouse1.csv",
-      "max_instances_num": 2
+      "behavior_file_mouse1": [
+        "/path/to/labels/video_val_mouse1.txt"
+      ],
+      "behavior_file_mouse2": [
+        "/path/to/labels/video_val_mouse2.txt"
+      ],
+      "max_instances_num": 2,
+      "cache_name": "val_video_val"
     }
   ],
-  "label_map_file": "config/org_label_map.json",
+  "label_map": "config/org_label_map.json",
   "label_merge": {
-    "enabled": false,
+    "enabled": true,
     "groups": [
       { "target": "stand", "sources": ["climbsocial"] }
     ]
