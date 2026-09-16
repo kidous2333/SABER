@@ -88,7 +88,7 @@ class EvolutionWorker(BaseWorker):
                 "--mu", str(params.get("mu", 100)),
                 "--lambda", str(params.get("lambda_", 100)),
                 "--generations", str(params.get("generations", 50)),
-                "--survivors", str(params.get("survivors", 0)),
+                "--survivors", str(params.get("survivors", 1)),
                 "--crossover-rate", str(params.get("crossover_rate", 0.65)),
                 "--mutation-rate", str(params.get("mutation_rate", 0.35)),
                 "--seed-factors", str(params.get("seed_factors", 30)),

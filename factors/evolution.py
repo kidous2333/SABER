@@ -1696,13 +1696,14 @@ def parse_args():
     p.add_argument("--output", default="memory/evolved_factors.json",
                    help="Output factor JSON path (default: memory/evolved_factors.json)")
     p.add_argument("--mu", type=int, default=100,
-                   help="mu (parent population size, eaMuPlusLambda) (default: 200)")
+                   help="mu (parent population size, eaMuPlusLambda) (default: 100)")
     p.add_argument("--lambda", dest="lambda_", type=int, default=100,
-                   help="lambda (offspring per generation, eaMuPlusLambda) (default: 200)")
+                   help="lambda (offspring per generation, eaMuPlusLambda) (default: 100)")
     p.add_argument("--generations", type=int, default=50,
                    help="Number of generations (default: 50)")
-    p.add_argument("--survivors", type=int, default=0,
-                   help="Number of individuals to keep (default: 100)")
+    p.add_argument("--survivors", type=int, default=1,
+                   help="Number of convergence cycles to run (0 = unlimited, keeps cycling until "
+                        "manually stopped; default: 1)")
     p.add_argument("--crossover-rate", type=float, default=0.65,
                    help="Crossover probability (default: 0.7)")
     p.add_argument("--mutation-rate", type=float, default=0.35,
