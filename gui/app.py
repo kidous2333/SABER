@@ -22,6 +22,18 @@ from gui.main_window import MainWindow
 
 def setup_application() -> QApplication:
     """Configure and return the QApplication instance."""
+    # On Windows, give the process its own AppUserModelID so the taskbar shows
+    # the application icon instead of the python.exe icon. Must be called
+    # BEFORE the QApplication is created.
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                "SABER.GUI"
+            )
+        except Exception:
+            pass
+
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
