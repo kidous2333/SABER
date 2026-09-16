@@ -179,9 +179,17 @@ def load_dataset_config(cfg: dict, config_file_path: str, logger) -> dict:
         if not lm_path.exists():
             # Also try as an absolute path
             lm_path = Path(raw_label_map)
-        logger.info(f"Loading label_map file: {lm_path}")
-        with open(lm_path, "r", encoding="utf-8") as f:
-            label_map = json.load(f)
+        if lm_path.exists():
+            logger.info(f"Loading label_map file: {lm_path}")
+            with open(lm_path, "r", encoding="utf-8") as f:
+                label_map = json.load(f)
+        else:
+            # Referenced label-map file is missing (e.g. a dataset config that
+            # still points at an old repo file) — fall back instead of crashing.
+            logger.warning(
+                f"Label map file not found: {lm_path}, falling back to label_map in config.yaml"
+            )
+            label_map = cfg.get("label_map", {})
     elif isinstance(raw_label_map, dict):
         label_map = raw_label_map
     else:
