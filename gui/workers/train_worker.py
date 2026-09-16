@@ -277,8 +277,8 @@ class TrainWorker(BaseWorker):
 
             # --- Setup ---
             self.set_progress(5, "Importing modules...")
-            from src.pose_trainer import train_tmp_model, _ensure_saga_registered
-            _ensure_saga_registered()
+            from src.pose_trainer import train_tmp_model, _ensure_tmp_registered
+            _ensure_tmp_registered()
             _install_epoch_hook(self, epochs)
 
             self.set_progress(10, "Starting training...")

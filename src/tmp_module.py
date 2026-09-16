@@ -1,15 +1,16 @@
 """
-SAGA (Spatially Aggregated Global Attention) neural network module.
+TMP (Token Mixed Pose) neural network modules.
 
-Custom pose estimation backbone components that replace standard C3k2 blocks
-with attention-enhanced variants for improved keypoint detection on mice.
+Custom pose-estimation blocks used by the released TMP checkpoints and the
+TMP training pipeline.
 
 Architecture:
-  - SAGA: Spatially Aggregated Global Attention block (core attention module)
-    - PSA: Partitioned Self-Attention (intra-group)
-    - GCCA: Group Cross-Correlation Attention (inter-group)
-  - Bottleneck_SAGA: Bottleneck with embedded SAGA
-  - SASA: C2f variant using Bottleneck_SAGA (drop-in replacement for C3k2)
+  - TMP: Token Mixed Pose block (core attention module)
+    - IASA: Intra-group Aggregated Self-Attention
+    - IRCA: Inter-group Relation Cross-Attention
+  - Bottleneck_TMP: Bottleneck with embedded TMP
+  - C3k_TMP: C3k variant using Bottleneck_TMP
+  - C3k2_TMP: C2f variant using C3k_TMP / Bottleneck (drop-in for C3k2)
 """
 
 import math
@@ -21,7 +22,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 
-import ultralytics.nn.modules as _ulm
 from ultralytics.nn.modules.conv import Conv
 from ultralytics.nn.modules.block import Bottleneck, C2f, C3
 
@@ -113,6 +113,7 @@ def dists_and_buckets(x, means):
 #  Sub-layers
 # ------------------------------------------------------------------
 class PreNorm(nn.Module):
+    """Normalization layer (LayerNorm before the wrapped module)."""
     def __init__(self, dim, fn):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
@@ -123,6 +124,7 @@ class PreNorm(nn.Module):
 
 
 class dwconv(nn.Module):
+    """Depthwise convolution over flattened spatial tokens."""
     def __init__(self, hidden_features, kernel_size=5):
         super(dwconv, self).__init__()
         self.depthwise_conv = nn.Sequential(
@@ -139,6 +141,7 @@ class dwconv(nn.Module):
 
 
 class ConvFFN(nn.Module):
+    """Conv-enhanced feed-forward network."""
     def __init__(self, in_features, hidden_features=None, out_features=None, kernel_size=5, act_layer=nn.GELU):
         super().__init__()
         out_features = out_features or in_features
@@ -156,8 +159,9 @@ class ConvFFN(nn.Module):
         return x
 
 
-class PSA(nn.Module):
-    """Partitioned Self-Attention — intra-group attention over spatially partitioned tokens."""
+class IASA(nn.Module):
+    """Intra-group Aggregated Self-Attention — attention within spatially
+    partitioned token groups plus a global token branch."""
     def __init__(self, dim, qk_dim, heads, group_size):
         super().__init__()
         self.heads = heads
@@ -176,7 +180,7 @@ class PSA(nn.Module):
         k = torch.gather(k, dim=-2, index=idx_last.expand(k.shape))
         v = torch.gather(v, dim=-2, index=idx_last.expand(v.shape))
 
-        gs = min(N, self.group_size)
+        gs = min(N, self.group_size)  # group size
         ng = (N + gs - 1) // gs
         pad_n = ng * gs - N
 
@@ -203,8 +207,9 @@ class PSA(nn.Module):
         return out
 
 
-class GCCA(nn.Module):
-    """Group Cross-Correlation Attention — inter-group relational cross-attention."""
+class IRCA(nn.Module):
+    """Inter-group Relation Cross-Attention — produces the global keys/values
+    used by IASA from token-group means."""
     def __init__(self, dim, qk_dim, heads):
         super().__init__()
         self.heads = heads
@@ -226,13 +231,15 @@ class GCCA(nn.Module):
 
 
 # ------------------------------------------------------------------
-#  Core SAGA block
+#  Core TMP block
 # ------------------------------------------------------------------
-class SAGA(nn.Module):
-    """Spatially Aggregated Global Attention — groups spatial tokens and applies
-    intra-group (PSA) and inter-group (GCCA) attention for global context modeling."""
+class TMP(nn.Module):
+    """Token Mixed Pose block — groups spatial tokens and applies intra-group
+    (IASA) and inter-group (IRCA) attention for global context modeling."""
+
     def __init__(self, dim, qk_dim, mlp_dim, heads, n_iter=3,
-                 num_tokens=8, group_size=128, ema_decay=0.999):
+                 num_tokens=8, group_size=128,
+                 ema_decay=0.999):
         super().__init__()
 
         self.n_iter = n_iter
@@ -241,8 +248,8 @@ class SAGA(nn.Module):
 
         self.norm = nn.LayerNorm(dim)
         self.mlp = PreNorm(dim, ConvFFN(dim, mlp_dim))
-        self.gcca_attn = GCCA(dim, qk_dim, heads)
-        self.psa_attn = PSA(dim, qk_dim, heads, group_size)
+        self.irca_attn = IRCA(dim, qk_dim, heads)
+        self.iasa_attn = IASA(dim, qk_dim, heads, group_size)
         self.register_buffer('means', torch.randn(num_tokens, dim))
         self.register_buffer('initted', torch.tensor(False))
         self.conv1x1 = nn.Conv2d(dim, dim, 1, bias=False)
@@ -267,7 +274,7 @@ class SAGA(nn.Module):
                 for _ in range(self.n_iter - 1):
                     x_means = center_iter(F.normalize(x, dim=-1), F.normalize(x_means, dim=-1))
 
-        k_global, v_global, x_means = self.gcca_attn(x, x_means)
+        k_global, v_global, x_means = self.irca_attn(x, x_means)
 
         with torch.no_grad():
             x_scores = torch.einsum('b i c,j c->b i j',
@@ -278,7 +285,7 @@ class SAGA(nn.Module):
             idx = torch.argsort(x_belong_idx, dim=-1)
             idx_last = torch.gather(idx_last, dim=-1, index=idx).unsqueeze(-1)
 
-        y = self.psa_attn(x, idx_last, k_global, v_global)
+        y = self.iasa_attn(x, idx_last, k_global, v_global)
         y = rearrange(y, 'b (h w) c->b c h w', h=h).contiguous()
         y = self.conv1x1(y)
         x = residual + rearrange(y, 'b c h w->b (h w) c')
@@ -297,10 +304,13 @@ class SAGA(nn.Module):
 
 
 # ------------------------------------------------------------------
-#  Bottleneck with embedded SAGA
+#  Bottleneck with embedded TMP
 # ------------------------------------------------------------------
-class Bottleneck_SAGA(nn.Module):
-    """Bottleneck with embedded SAGA for global context enhancement."""
+class Bottleneck_TMP(nn.Module):
+    """
+    Improved Bottleneck with embedded TMP (Token Mixed Pose) block.
+    Structure: Input -> Conv1x1/3x3 -> [TMP] -> Conv3x3 -> Output (+ Shortcut)
+    """
 
     def __init__(
             self,
@@ -310,74 +320,81 @@ class Bottleneck_SAGA(nn.Module):
             g: int = 1,
             k: Tuple[int, int] = (3, 3),
             e: float = 0.5,
-            saga_heads: int = 4,
-            saga_mlp_ratio: float = 2.0,
-            saga_num_tokens: int = 8,
-            saga_group_size: int = 128,
-            use_saga: bool = True
+            # TMP block parameters
+            tmp_heads: int = 4,
+            tmp_mlp_ratio: float = 2.0,
+            tmp_num_tokens: int = 8,
+            tmp_group_size: int = 128,
+            use_tmp: bool = True
     ):
         super().__init__()
 
         c_ = int(c2 * e)  # hidden channels
 
+        # 1. Standard convolution part
         self.cv1 = Conv(c1, c_, k[0], 1)
         self.cv2 = Conv(c_, c2, k[1], 1, g=g)
 
-        self.use_saga = use_saga
-        if self.use_saga:
-            mlp_dim = int(c_ * saga_mlp_ratio)
+        # 2. Embedded TMP module
+        self.use_tmp = use_tmp
+        if self.use_tmp:
+            # Note: TMP's dim must equal cv1's output channels c_
+            mlp_dim = int(c_ * tmp_mlp_ratio)
             qk_dim = c_
 
-            self.saga = SAGA(
+            self.tmp = TMP(
                 dim=c_,
                 qk_dim=qk_dim,
                 mlp_dim=mlp_dim,
-                heads=saga_heads,
-                num_tokens=saga_num_tokens,
-                group_size=saga_group_size
+                heads=tmp_heads,
+                num_tokens=tmp_num_tokens,
+                group_size=tmp_group_size
             )
         else:
-            self.saga = nn.Identity()
+            self.tmp = nn.Identity()
 
         self.add = shortcut and c1 == c2
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply bottleneck with TMP enhancement."""
+        # Step 1: local feature extraction and channel reduction
         x_conv1 = self.cv1(x)
 
-        if self.use_saga:
-            x_saga = self.saga(x_conv1)
+        # Step 2: global context enhancement (TMP)
+        # TMP expects (B, C, H, W) input; it handles the rearrange internally
+        if self.use_tmp:
+            x_tmp = self.tmp(x_conv1)
         else:
-            x_saga = x_conv1
+            x_tmp = x_conv1
 
-        x_conv2 = self.cv2(x_saga)
+        # Step 3: restore channels
+        x_conv2 = self.cv2(x_tmp)
 
+        # Step 4: residual connection
         if self.add:
             return x + x_conv2
         else:
             return x_conv2
 
 
-# ------------------------------------------------------------------
-#  SASA: Spatial Aggregated Self-Attention block (C2f variant)
-# ------------------------------------------------------------------
-class C3k_SAGA(C3):
-    """C3k with Bottleneck_SAGA replacing standard bottlenecks."""
+class C3k_TMP(C3):
+    """C3k with Bottleneck_TMP replacing the standard bottlenecks."""
 
     def __init__(self, c1: int, c2: int, n: int = 1, shortcut: bool = True, g: int = 1, e: float = 0.5, k: int = 3):
         super().__init__(c1, c2, n, shortcut, g, e)
-        c_ = int(c2 * e)
-        self.m = nn.Sequential(*(Bottleneck_SAGA(c_, c_, shortcut, g, k=(k, k), e=1.0) for _ in range(n)))
+        c_ = int(c2 * e)  # hidden channels
+        self.m = nn.Sequential(*(Bottleneck_TMP(c_, c_, shortcut, g, k=(k, k), e=1.0) for _ in range(n)))
 
 
-class SASA(C2f):
-    """Spatial Aggregated Self-Attention — C2f variant with C3k_SAGA for the main branch.
-    Drop-in replacement for C3k2 in backbone architectures."""
+class C3k2_TMP(C2f):
+    """Token Mixed Pose C2f variant — drop-in replacement for C3k2.
+    Uses C3k_TMP on the main branch when c3k=True, plain Bottleneck otherwise."""
 
     def __init__(
         self, c1: int, c2: int, n: int = 1, c3k: bool = False, e: float = 0.5, g: int = 1, shortcut: bool = True
     ):
         super().__init__(c1, c2, n, shortcut, g, e)
         self.m = nn.ModuleList(
-            C3k_SAGA(self.c, self.c, 2, shortcut, g) if c3k else Bottleneck(self.c, self.c, shortcut, g)
+            C3k_TMP(self.c, self.c, 2, shortcut, g) if c3k else Bottleneck(self.c, self.c, shortcut, g)
             for _ in range(n)
         )

@@ -2,11 +2,12 @@
 TMP (Token Mixed Pose) Model Trainer.
 
 Thin wrapper around the ultralytics training engine for TMP pose estimation
-models. Supports standard and SAGA-enhanced (SASA block) backbone architectures.
+models. Supports standard and TMP-enhanced (C3k2_TMP block) backbone
+architectures.
 
 The TMP architecture replaces standard C3k2 blocks in the backbone with
-SASA (Spatial Aggregated Self-Attention) blocks, which use SAGA attention
-(PSA intra-group + GCCA inter-group) for improved keypoint detection.
+C3k2_TMP blocks, which use TMP attention (IASA intra-group + IRCA
+inter-group) for improved keypoint detection.
 
 Usage:
     from src.pose_trainer import train_tmp_model
@@ -41,51 +42,58 @@ except ImportError:
 
 
 # ------------------------------------------------------------------
-#  SASA / SAGA module registration
+#  TMP module registration
 # ------------------------------------------------------------------
-def _ensure_saga_registered():
+def _ensure_tmp_registered():
     """
-    Ensure SASA and Bottleneck_SAGA are recognised by the model YAML parser.
+    Ensure the TMP blocks are recognised by the model YAML parser.
 
     Strategy:
-      1. Inject SASA / Bottleneck_SAGA into the tasks module namespace.
-      2. Globally replace C3k2 with SASA (same signature, drop-in compatible)
-         so both backbone and head use SAGA-enhanced blocks.
+      1. Inject TMP / Bottleneck_TMP / C3k_TMP / C3k2_TMP into the tasks
+         module namespace.
+      2. Globally replace C3k2 with C3k2_TMP (same signature, drop-in
+         compatible) so both backbone and head use TMP-enhanced blocks.
     """
     try:
         import ultralytics.nn.tasks as tasks
     except ImportError:
         return
 
-    from src.tmp_module import SASA, Bottleneck_SAGA
+    from src.tmp_module import TMP, Bottleneck_TMP, C3k_TMP, C3k2_TMP
 
     # -- 1. inject classes -------------------------------------------------
-    tasks.SASA = SASA
-    tasks.Bottleneck_SAGA = Bottleneck_SAGA
+    tasks.TMP = TMP
+    tasks.Bottleneck_TMP = Bottleneck_TMP
+    tasks.C3k_TMP = C3k_TMP
+    tasks.C3k2_TMP = C3k2_TMP
 
-    # -- 2. check whether parse_model already knows SASA --------------------
+    # -- 2. check whether parse_model already knows C3k2_TMP ---------------
     import inspect
     try:
         src = inspect.getsource(tasks.parse_model)
     except OSError:
         src = ""
-    if "SASA" in src:
+    if "C3k2_TMP" in src:
         return  # already patched at source level
 
-    # ── replace C3k2 globally with SASA ─────────────────────────────────
-    #      SASA(C2f) has the same signature as C3k2, so this is a
+    # ── replace C3k2 globally with C3k2_TMP ──────────────────────────────
+    #      C3k2_TMP(C2f) has the same signature as C3k2, so this is a
     #      drop-in replacement.  Both backbone and head will use the
-    #      SAGA-enhanced blocks.
+    #      TMP-enhanced blocks.
     _c3k2 = getattr(tasks, "C3k2", None) or getattr(__import__("ultralytics.nn.modules.block"), "C3k2", None)
     if _c3k2 is not None:
-        tasks.C3k2 = SASA
-        tasks.C3k2_SASA = SASA  # alias
-    # Same for C3k (parent of C3k_SAGA)
-    _c3 = getattr(tasks, "C3", None)
-    if _c3 is not None:
-        from src.tmp_module import C3k_SAGA
-        # Don't replace C3 globally — C3k_SAGA is used internally by SASA
-    logger.info("SASA registered (C3k2 → SASA global replacement)")
+        tasks.C3k2 = C3k2_TMP
+        tasks.C3k2_TMP = C3k2_TMP  # alias (also covers explicit YAML names)
+
+    # ── mirror the frozenset entries used by parse_model ------------------
+    try:
+        tasks.repeat_modules = tasks.repeat_modules | {"C3k2_TMP"}
+    except Exception:
+        pass
+    try:
+        tasks.multi_output_modules = tasks.multi_output_modules | {"C3k2_TMP"}
+    except Exception:
+        pass
 
     # -- 3. patch yaml_model_load to respect YAML's own scale key -----------
     _orig_yaml_load = tasks.yaml_model_load
@@ -103,7 +111,8 @@ def _ensure_saga_registered():
         return d
     tasks.yaml_model_load = _patched_yaml_load
 
-    tasks._saga_patched = True
+    tasks._tmp_patched = True
+    logger.info("TMP blocks registered (C3k2 → C3k2_TMP global replacement)")
 
 
 # ------------------------------------------------------------------
@@ -163,8 +172,8 @@ def train_tmp_model(
     """
     import logging as _logging
 
-    # Ensure SASA blocks are available before model YAML parsing
-    _ensure_saga_registered()
+    # Ensure TMP blocks are available before model YAML parsing
+    _ensure_tmp_registered()
 
     # ── suppress engine chatter ───────────────────────────────────────
     _ul_loggers = ["ultralytics", "engine", "torch"]
@@ -283,6 +292,7 @@ def validate_tmp_model(
     """
     from ultralytics import YOLO
 
+    _ensure_tmp_registered()
     model = YOLO(weights)
     metrics = model.val(data=dataset_yaml, device=device, **kwargs)
 

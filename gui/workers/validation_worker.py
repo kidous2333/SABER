@@ -52,10 +52,6 @@ class ValidationWorker(BaseWorker):
 
             result = {"mode": mode}
 
-            # ── Pose mode needs the custom ultralytics engine ─
-            if mode == "Pose":
-                self._activate_custom_engine()
-
             if mode == "Pose":
                 self._run_pose_validation(result)
             elif mode == "Behavior Prediction":
@@ -83,27 +79,6 @@ class ValidationWorker(BaseWorker):
                 except Exception:
                     pass
             self.finished.emit()
-
-    # ── Optional custom ultralytics engine ──
-    # Set the SABER_CUSTOM_ULTRALYTICS env var to the engine directory to
-    # load legacy checkpoints (e.g. TAB-class naming); otherwise the
-    # standard installed ultralytics is used.
-
-    _CUSTOM_ENGINE_PATH = os.environ.get("SABER_CUSTOM_ULTRALYTICS")
-
-    def _activate_custom_engine(self):
-        """Swap to a custom ultralytics engine if SABER_CUSTOM_ULTRALYTICS
-        is set, so legacy checkpoints can be loaded."""
-        custom = self._CUSTOM_ENGINE_PATH
-        if not custom:
-            return
-        if custom not in sys.path:
-            sys.path.insert(0, custom)
-        # Clear cached ultralytics so it gets re-imported from the custom path
-        to_drop = [k for k in list(sys.modules) if k == "ultralytics" or k.startswith("ultralytics.")]
-        for k in to_drop:
-            del sys.modules[k]
-        self.log(f"Switched to custom ultralytics engine: {custom}", 20)
 
     def _build_temp_pose_dataset(self, image_dir: Path, label_dir: Path) -> Path:
         """Build a temporary YOLO dataset YAML for model.val()."""

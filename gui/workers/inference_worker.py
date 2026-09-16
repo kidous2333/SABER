@@ -22,26 +22,9 @@ from gui.utils.logging_handler import ModuleLogRedirector
 class InferenceWorker(BaseWorker):
     """Worker that runs model inference (Pose / Behavior Prediction)."""
 
-    # Optional custom ultralytics engine (e.g. a fork with extra backbones).
-    # Set the SABER_CUSTOM_ULTRALYTICS env var to its directory to activate;
-    # otherwise the standard installed ultralytics is used.
-    _CUSTOM_ENGINE_PATH = os.environ.get("SABER_CUSTOM_ULTRALYTICS")
-
     def __init__(self, params: dict, parent=None):
         super().__init__(parent)
         self._params = params
-
-    def _activate_custom_engine(self):
-        custom = self._CUSTOM_ENGINE_PATH
-        if not custom:
-            return
-        if custom not in sys.path:
-            sys.path.insert(0, custom)
-        to_drop = [k for k in list(sys.modules)
-                   if k == "ultralytics" or k.startswith("ultralytics.")]
-        for k in to_drop:
-            del sys.modules[k]
-        self.log(f"Switched to custom ultralytics engine: {custom}", 20)
 
     @Slot()
     def run(self):
@@ -247,7 +230,8 @@ class InferenceWorker(BaseWorker):
         self.set_progress(10, "Loading YOLO pose model...")
         self.log(f"Pose model: {weights.name}", 20)
 
-        self._activate_custom_engine()
+        from src.pose_trainer import _ensure_tmp_registered
+        _ensure_tmp_registered()
         from ultralytics import YOLO
         model = YOLO(str(weights))
 
@@ -1051,7 +1035,8 @@ class InferenceWorker(BaseWorker):
         self.log(f"Camera opened: {actual_w}×{actual_h} @{actual_fps:.0f}fps", 20)
 
         self.set_progress(10, "Loading YOLO model...")
-        self._activate_custom_engine()
+        from src.pose_trainer import _ensure_tmp_registered
+        _ensure_tmp_registered()
         from ultralytics import YOLO
         model = YOLO(str(weights))
 
@@ -1321,7 +1306,8 @@ class InferenceWorker(BaseWorker):
 
         # Load YOLO
         self.set_progress(10, "Loading YOLO model...")
-        self._activate_custom_engine()
+        from src.pose_trainer import _ensure_tmp_registered
+        _ensure_tmp_registered()
         from ultralytics import YOLO
         model = YOLO(str(pose_weights))
 
