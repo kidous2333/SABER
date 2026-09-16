@@ -13,7 +13,7 @@ SABER_site/
 │                         #   GUI / Results / Availability
 ├── css/style.css         # all styling (UDMT-like: centered titles + <hr>)
 ├── assets/
-│   ├── figures/          # main figures (rendered from assets/Figure_09102026/*.pdf)
+│   ├── figures/          # main figures (Figure1..5.png + source PDFs)
 │   ├── img/              # icon.png, favicon.png, apple-touch-icon.png, architecture.png
 │   └── videos/           # demo videos go here (not used yet)
 └── README.md
@@ -38,10 +38,11 @@ drop, or https://app.netlify.com/drop). The URL stays the same.
    block; fill from the submission system).
 2. Paper link (add once published).
 3. GUI screenshot (drop PNG into `assets/img/`, replace the placeholder div).
-4. Dataset / pretrained-model download links (once hosted).
 
 ## Content sources
 
 - Title / abstract / method text: `论文初稿/SABER NM 7th version 08252026.docx`
-- Main figures: `assets/Figure_09102026/Figure1..5.pdf` (rendered at 2x → `assets/figures/Figure1..5.png`)
+- Main figures: `assets/figures/Figure1..5.png` (source PDFs kept in the same folder)
+- Dataset: https://www.scidb.cn/s/UrAjMr
+- Model weights: https://www.scidb.cn/s/RjQRFz
 - GitHub: https://github.com/kidous2333/SABER
