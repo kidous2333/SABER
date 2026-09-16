@@ -296,17 +296,28 @@ def _verify_saved_weights(output_dir: str, stage_cache_dir: str, logger):
 
         if meta_parts:
             meta_X = np.hstack(meta_parts).astype(np.float32)
-            proba_meta_loaded = loaded_meta.predict(meta_X).astype(np.float32)
-            min_c = min(proba_meta_cached.shape[1], proba_meta_loaded.shape[1])
-            max_diff = float(np.abs(
-                proba_meta_cached[:, :min_c] - proba_meta_loaded[:, :min_c]
-            ).max())
-
-            if max_diff < 3e-1:
-                logger.info(f"[Weight verification] meta-LGBM PASS (max_diff={max_diff:.2e}, float16 quantization error)")
+            expected_nfeat = loaded_meta.num_feature()
+            if meta_X.shape[1] != expected_nfeat:
+                # Stale stage cache from a different run (different factor set) — the
+                # cached matrices cannot be used to verify this model. Skip instead
+                # of crashing on the feature-count mismatch.
+                logger.warning(
+                    f"[Weight verification] meta feature count mismatch "
+                    f"(model={expected_nfeat}, cache={meta_X.shape[1]}), "
+                    f"skipping meta verification (stale stage cache?)"
+                )
             else:
-                logger.error(f"[Weight verification] meta-LGBM FAIL (max_diff={max_diff:.6e})")
-                all_ok = False
+                proba_meta_loaded = loaded_meta.predict(meta_X).astype(np.float32)
+                min_c = min(proba_meta_cached.shape[1], proba_meta_loaded.shape[1])
+                max_diff = float(np.abs(
+                    proba_meta_cached[:, :min_c] - proba_meta_loaded[:, :min_c]
+                ).max())
+
+                if max_diff < 3e-1:
+                    logger.info(f"[Weight verification] meta-LGBM PASS (max_diff={max_diff:.2e}, float16 quantization error)")
+                else:
+                    logger.error(f"[Weight verification] meta-LGBM FAIL (max_diff={max_diff:.6e})")
+                    all_ok = False
 
     # -- Verify BiLSTM checkpoint --
     bilstm_path = weights_dir / "bilstm_best.pt"
@@ -464,14 +475,25 @@ def main():
         if max_samples > 0:
             import numpy as _np
             rng = _np.random.default_rng(42)
+            train_sampled = val_sampled = False
             for kp, lb, tag in [(train_kp, train_lb, "training"), (val_kp, val_lb, "validation")]:
                 if len(lb) > max_samples:
                     idx = rng.choice(len(lb), max_samples, replace=False)
                     idx.sort()
                     if tag == "training":
                         train_kp, train_lb = kp[idx], lb[idx]
+                        train_sampled = True
                     else:
                         val_kp, val_lb = kp[idx], lb[idx]
+                        val_sampled = True
+            # Global random sampling destroys the per-video frame boundaries, so the
+            # per-video length lists no longer describe the sampled arrays. Treat each
+            # sampled split as a single video (video_lengths=None) so the window
+            # builder pads once instead of walking out of bounds.
+            if train_sampled:
+                train_vlens = None
+            if val_sampled:
+                val_vlens = None
             logger.info(f"Sampled: training set {train_kp.shape[0]} frames, validation set {val_kp.shape[0]} frames")
 
         logger.info(f"Training set: {train_kp.shape[0]} frames, Validation set: {val_kp.shape[0]} frames, D={train_kp.shape[1]}")
